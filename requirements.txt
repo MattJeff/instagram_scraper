@@ -2,7 +2,6 @@ Flask
 requests
 instaloader
 python-dotenv
-openai
 moviepy
 redis
 celery
