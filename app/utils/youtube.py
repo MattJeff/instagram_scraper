@@ -1,37 +1,28 @@
 # app/utils/youtube.py
+
 import re
+from pytube import YouTube
 import os
-import googleapiclient.discovery
-from googleapiclient.errors import HttpError
 
 def fetch_youtube_data(video_url):
     print("Starting YouTube data extraction")
     
-    video_id = extract_youtube_video_id(video_url)
-    youtube_data = {}
-
-    api_key = os.getenv("YOUTUBE_API_KEY")
-    youtube = googleapiclient.discovery.build('youtube', 'v3', developerKey=api_key)
-
     try:
-        request = youtube.videos().list(part="snippet,contentDetails,statistics", id=video_id)
-        response = request.execute()
-
-        video_details = response['items'][0]
-
+        yt = YouTube(video_url)
         youtube_data = {
             "video_url": video_url,
-            "likes": video_details['statistics']['likeCount'],
-            "comments": video_details['statistics']['commentCount'],
-            "views": video_details['statistics']['viewCount'],
-            "username": video_details['snippet']['channelTitle'],
-            "followers": "",  # Requires a separate API call to get channel details
-            "following": "",  # YouTube does not make this clear
-            "publications": "",  # Requires a separate API call
-            "profile_url": f"https://www.youtube.com/channel/{video_details['snippet']['channelId']}"
+            "title": yt.title,
+            "likes": yt.views,  # Pytube ne fournit pas de likeCount directement
+            "comments": "",  # Pytube ne supporte pas les commentaires directement
+            "views": yt.views,
+            "username": yt.author,
+            "followers": "",  # Pytube ne supporte pas le comptage des abonnés
+            "following": "",  # YouTube n'a pas de concept explicite de "following"
+            "publications": "",  # Pas de moyen direct d'obtenir le nombre de vidéos de la chaîne
+            "profile_url": yt.channel_url
         }
 
-    except HttpError as e:
+    except Exception as e:
         print(f"Error during YouTube data extraction: {e}")
         raise
 
@@ -39,7 +30,19 @@ def fetch_youtube_data(video_url):
     return youtube_data
 
 def extract_youtube_video_id(url):
-    match = re.search(r'(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)([A-Za-z0-9-_]{11})', url)
+    match = re.search(r'(?:https?://)?(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)([A-Za-z0-9-_]{11})', url)
     if not match:
         raise ValueError("Invalid YouTube URL")
     return match.group(1)
+
+def download_youtube_video(video_url, output_path="."):
+    print(f"Starting download of YouTube video from {video_url}")
+    try:
+        yt = YouTube(video_url)
+        stream = yt.streams.get_highest_resolution()
+        video_path = stream.download(output_path=output_path)
+        print(f"Video downloaded to {video_path}")
+        return video_path
+    except Exception as e:
+        print(f"Error during video download: {e}")
+        raise

@@ -56,3 +56,4 @@ beautifulsoup4==4.10.0
 google-api-python-client==2.33.0
 pytube3 
 TikTokApi
+pytube
