@@ -15,23 +15,19 @@ def index():
 @routes.route('/get_script', methods=['POST'])
 def get_script():
     data = request.get_json()
-    if 'url' not in data:
-        return jsonify({'error': 'URL manquante'}), 400
+    if 'url' not in data or 'platform' not in data:
+        return jsonify({'error': 'Missing URL or platform'}), 400
 
     video_url = data['url']
+    platform = data['platform'].lower()
+
     try:
-        instagram_data = fetch_instagram_data(video_url)
-        print(f"Données Instagram prêtes pour le traitement: {instagram_data}")
-
-        #task = process_video_task.apply_async(args=[instagram_data['video_url']])
-        transcribe = process_video_task(instagram_data['video_url'])
-        instagram_data['script'] = transcribe
-        #instagram_data['script'] = task
-
-        return jsonify({'post': instagram_data}), 202
+        # Directly process video task
+        transcribe = process_video_task(platform, video_url)
+        return jsonify({'script': transcribe}), 202
 
     except Exception as e:
-        print(f"Erreur lors de l'extraction des données Instagram: {e}")
+        print(f"Error extracting data: {e}")
         return jsonify({'error': str(e)}), 500
 
 @routes.route('/task_status/<task_id>', methods=['GET'])
